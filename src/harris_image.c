@@ -154,7 +154,7 @@ image cornerness_response(image S)
 
     const float alpha = .06F;
 
-    float A,B,C, det, powtrace;
+    float A,B,C, det, trace;
     for (int y = 0; y!=S.h; y++)
     {
         for (int x=0; x!=S.w; x++)
@@ -163,8 +163,8 @@ image cornerness_response(image S)
             B = get_pixel(S, x, y, 1);
             C = get_pixel(S, x, y, 2);
             det = (A*B) - pow(C, 2);
-            powtrace = pow((A+B), 2);
-            set_pixel(R, x, y, 0, det - (alpha * powtrace));
+            trace = A+B;
+            set_pixel(R, x, y, 0, det - alpha * pow(trace,2));
         }
     }
     return R;
@@ -182,6 +182,26 @@ image nms_image(image im, int w)
     //     for neighbors within w:
     //         if neighbor response greater than pixel response:
     //             set response to be very low (I use -999999 [why not 0??])
+
+    float imPix, wPix;
+    for (int y=0; y!=im.h; y++)
+    {
+        for (int x=0; x!=im.w; x++)
+        {
+            imPix = get_pixel(im, x, y, 0);
+            for (int wy=-w; wy!=w+1; wy++)
+            {
+                for (int wx=-w; wx!=w+1; wx++)
+                {
+                    wPix = get_pixel(im, wx+x, wy+y, 0);
+                    if (wPix > imPix)
+                    {
+                        set_pixel(r, x, y, 0, -999999);
+                    }
+                }
+            }
+        }
+    }
     return r;
 }
 
@@ -205,13 +225,34 @@ descriptor *harris_corner_detector(image im, float sigma, float thresh, int nms,
 
 
     //TODO: count number of responses over threshold
-    int count = 1; // change this
+    int count = 0; // change this
+
+    for (int i=0; i!=Rnms.w*Rnms.h; i++)
+    {
+        if (Rnms.data[i] > thresh)
+        {
+            count++;
+        }
+    }
+
+    printf("Number of matches %d \n", count);
 
     
     *n = count; // <- set *n equal to number of corners in image.
     descriptor *d = calloc(count, sizeof(descriptor));
     //TODO: fill in array *d with descriptors of corners, use describe_index.
 
+
+    for (int i=0; i!=Rnms.h*Rnms.w; i++)
+    {
+        if (Rnms.data[i] > thresh)
+        {
+            *d++ = describe_index(im, i);
+        }
+    }
+
+    // Reset pointer status to initial position
+    d -= count;
 
     free_image(S);
     free_image(R);
