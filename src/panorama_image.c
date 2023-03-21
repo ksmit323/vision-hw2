@@ -98,6 +98,7 @@ image find_and_draw_matches(image a, image b, float sigma, float thresh, int nms
     int bn = 0;
     int mn = 0;
     descriptor *ad = harris_corner_detector(a, sigma, thresh, nms, &an);
+
     descriptor *bd = harris_corner_detector(b, sigma, thresh, nms, &bn);
     match *m = match_descriptors(ad, an, bd, bn, &mn);
 
@@ -118,7 +119,13 @@ image find_and_draw_matches(image a, image b, float sigma, float thresh, int nms
 float l1_distance(float *a, float *b, int n)
 {
     // TODO: return the correct number.
-    return 0;
+    float l1=0.F;
+
+    for (int i=0; i!=n; i++)
+    {
+        l1 += fabs(b[i]-a[i]);
+    }
+    return l1;
 }
 
 // Finds best matches between descriptors of two images.
@@ -134,25 +141,53 @@ match *match_descriptors(descriptor *a, int an, descriptor *b, int bn, int *mn)
     // We will have at most an matches.
     *mn = an;
     match *m = calloc(an, sizeof(match));
+    float l1, aux;
     for(j = 0; j < an; ++j){
         // TODO: for every descriptor in a, find best match in b.
         // record ai as the index in *a and bi as the index in *b.
         int bind = 0; // <- find the best match
+        l1 = l1_distance(a[j].data, b[0].data, a[j].n);
+        for (i=1; i<bn; ++i)
+        {   
+            aux = l1_distance(a[j].data, b[i].data, a[j].n);
+            if (aux < l1)
+            {
+                bind = i;
+                l1 = aux;
+            }
+        }
+
         m[j].ai = j;
         m[j].bi = bind; // <- should be index in b.
         m[j].p = a[j].p;
         m[j].q = b[bind].p;
-        m[j].distance = 0; // <- should be the smallest L1 distance!
+        m[j].distance = l1; // <- should be the smallest L1 distance!
     }
 
     int count = 0;
     int *seen = calloc(bn, sizeof(int));
+
+    for (int k=0; k!= an; ++k)
+    {
+        printf("Distance %d before sorted: %f \n", k, m[k].distance);
+    }
+
     // TODO: we want matches to be injective (one-to-one).
     // Sort matches based on distance using match_compare and qsort.
+    qsort(m, an, sizeof(match), &match_compare);
     // Then throw out matches to the same element in b. Use seen to keep track.
     // Each point should only be a part of one match.
     // Some points will not be in a match.
     // In practice just bring good matches to front of list, set *mn.
+
+    for (int k=0; k!= an; ++k)
+    {
+        printf("Distance %d after sorted: %f \n", k, m[k].distance);
+    }
+
+
+
+    
     *mn = count;
     free(seen);
     return m;
