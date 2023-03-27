@@ -185,6 +185,24 @@ match *match_descriptors(descriptor *a, int an, descriptor *b, int bn, int *mn)
         printf("Distance %d after sorted: %f \n", k, m[k].distance);
     }
 
+    printf("Number of matches before removal: %d \n", an);
+    for (i=0; i<an; ++i)
+    {
+        seen[m[i].bi]++;
+        count++;
+        if (seen[i] > 1)
+        {
+            memmove(m+i, m+i+1, (--an-i)*sizeof(*m));
+        }
+    }
+
+    printf("Number of matches after removal: %d \n", an);
+    for (int k=0; k<an; k++)
+    {
+        printf("Distances %d after removed: %f \n", k, m[k].distance);
+    }
+
+
 
 
     
