@@ -197,20 +197,24 @@ match *match_descriptors(descriptor *a, int an, descriptor *b, int bn, int *mn)
 // returns: point projected using the homography.
 point project_point(matrix H, point p)
 {
-    // First we need to convert point to matrix (Pedro Comments)
     matrix c = make_matrix(3, 1);
 
     // Fill Matrix with values
     c.data[0][0] = (double)p.x;
     c.data[1][0] = (double)p.y;
+    c.data[2][0] = 1.0;
 
-    // matrix_mult_matrix(H, p);
-
+    matrix out = matrix_mult_matrix(H, c);
 
     // TODO: project point p with homography H.
     // Remember that homogeneous coordinates are equivalent up to scalar.
     // Have to divide by.... something...
-    point q = make_point(0, 0);
+
+    // Comprobar aqui la division por 0
+    // IMPORTANTE
+    point q = make_point((out.data[0][0])/(out.data[2][0]), (out.data[1][0])/(out.data[2][0]));
+
+    printf("Point x: %f, point y: %f \n", q.x, q.y);
     return q;
 }
 
@@ -220,7 +224,7 @@ point project_point(matrix H, point p)
 float point_distance(point p, point q)
 {
     // TODO: should be a quick one.
-    return 0;
+    return sqrt(pow(p.x-q.x, 2)+pow(p.y-q.y, 2));
 }
 
 // Count number of inliers in a set of matches. Should also bring inliers
