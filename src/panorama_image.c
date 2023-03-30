@@ -197,8 +197,16 @@ match *match_descriptors(descriptor *a, int an, descriptor *b, int bn, int *mn)
 // returns: point projected using the homography.
 point project_point(matrix H, point p)
 {
+    // First we need to convert point to matrix (Pedro Comments)
     matrix c = make_matrix(3, 1);
-    matrix_mult_matrix(H, p)
+
+    // Fill Matrix with values
+    c.data[0][0] = (double)p.x;
+    c.data[1][0] = (double)p.y;
+
+    // matrix_mult_matrix(H, p);
+
+
     // TODO: project point p with homography H.
     // Remember that homogeneous coordinates are equivalent up to scalar.
     // Have to divide by.... something...
