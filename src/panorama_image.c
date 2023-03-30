@@ -166,12 +166,7 @@ match *match_descriptors(descriptor *a, int an, descriptor *b, int bn, int *mn)
 
     int count = 0;
     int *seen = calloc(bn, sizeof(int));
-
-    for (int k=0; k!= an; ++k)
-    {
-        printf("Distance %d before sorted: %f \n", k, m[k].distance);
-    }
-
+    
     // TODO: we want matches to be injective (one-to-one).
     // Sort matches based on distance using match_compare and qsort.
     qsort(m, an, sizeof(match), &match_compare);
@@ -179,33 +174,18 @@ match *match_descriptors(descriptor *a, int an, descriptor *b, int bn, int *mn)
     // Each point should only be a part of one match.
     // Some points will not be in a match.
     // In practice just bring good matches to front of list, set *mn.
-
-    for (int k=0; k!= an; ++k)
-    {
-        printf("Distance %d after sorted: %f \n", k, m[k].distance);
-    }
-
-    printf("Number of matches before removal: %d \n", an);
     for (i=0; i<an; ++i)
     {
         seen[m[i].bi]++;
-        count++;
-        if (seen[i] > 1)
+        if (seen[m[i].bi] > 1)
         {
             memmove(m+i, m+i+1, (--an-i)*sizeof(*m));
         }
-    }
-
-    printf("Number of matches after removal: %d \n", an);
-    for (int k=0; k<an; k++)
-    {
-        printf("Distances %d after removed: %f \n", k, m[k].distance);
-    }
-
-
-
-
-    
+        else
+        {
+            count++;
+        }
+    }    
     *mn = count;
     free(seen);
     return m;
@@ -218,6 +198,7 @@ match *match_descriptors(descriptor *a, int an, descriptor *b, int bn, int *mn)
 point project_point(matrix H, point p)
 {
     matrix c = make_matrix(3, 1);
+    matrix_mult_matrix(H, p)
     // TODO: project point p with homography H.
     // Remember that homogeneous coordinates are equivalent up to scalar.
     // Have to divide by.... something...
