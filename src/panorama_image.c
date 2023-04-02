@@ -123,7 +123,7 @@ float l1_distance(float *a, float *b, int n)
 
     for (int i=0; i!=n; i++)
     {
-        l1 += fabs(b[i]-a[i]);
+        l1 += fabsf(b[i]-a[i]);
     }
     return l1;
 }
@@ -179,10 +179,15 @@ match *match_descriptors(descriptor *a, int an, descriptor *b, int bn, int *mn)
         seen[m[i].bi]++;
         if (seen[m[i].bi] > 1)
         {
+            // Move memory overlapping it
+            // shift the other elements forward in the list
+            // Moves m+i+1 position of array to m+i, overwriting elements m+1 element
+            // and copy the rest of bytes from the array (--an-i)*sizeof(*m)
             memmove(m+i, m+i+1, (--an-i)*sizeof(*m));
         }
         else
         {
+            // remember how many one-to-one matches we have at the end
             count++;
         }
     }    
@@ -213,8 +218,6 @@ point project_point(matrix H, point p)
     // Comprobar aqui la division por 0
     // IMPORTANTE
     point q = make_point((out.data[0][0])/(out.data[2][0]), (out.data[1][0])/(out.data[2][0]));
-
-    printf("Point x: %f, point y: %f \n", q.x, q.y);
     return q;
 }
 
@@ -243,7 +246,56 @@ int model_inliers(matrix H, match *m, int n, float thresh)
     // TODO: count number of matches that are inliers
     // i.e. distance(H*p, q) < thresh
     // Also, sort the matches m so the inliers are the first 'count' elements.
+    // we want to bring inliers to the front of the list.
+    // his should all be doable in one pass through the data.
+
+    float distance;
+    int numMatch = n;
+    match aux;
+
+    for (int j=0; j<n; j++)
+    {
+        distance = point_distance(project_point(H, m[j].p), m[j].q);
+        printf("Calculated distance prev sorting: %f \n", distance);
+    }
+
+    i =0;
+    while (i < numMatch)
+    {
+        // Calculate distance between proyected point and match point
+        distance = point_distance(project_point(H, m[i].p), m[i].q);
+        if (distance < thresh)
+        {
+            count++;
+            i++;
+        }
+        else
+        {
+            // Swap current match by the last in the list
+            aux = m[i];
+            m[i] = m[numMatch-1];
+            m[numMatch-1] = aux;
+            // Reduce n so that next iteration element is not processed.
+            numMatch--;
+        }
+    }
+
+
+    for (int j=0; j<n; j++)
+    {
+        distance = point_distance(project_point(H, m[j].p), m[j].q);
+        printf("Calculated distance after sorting: %f \n", distance);
+    }
+
+    printf("Number of points below threshold: %d \n", count);
     return count;
+}
+
+void swap(match* a, match* b)
+{
+    match aux = *a;
+    *a = *b;
+    *b = aux;
 }
 
 // Randomly shuffle matches for RANSAC.
