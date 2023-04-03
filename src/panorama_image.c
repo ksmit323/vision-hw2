@@ -205,8 +205,8 @@ point project_point(matrix H, point p)
     matrix c = make_matrix(3, 1);
 
     // Fill Matrix with values
-    c.data[0][0] = (double)p.x;
-    c.data[1][0] = (double)p.y;
+    c.data[0][0] = p.x;
+    c.data[1][0] = p.y;
     c.data[2][0] = 1.0;
 
     matrix out = matrix_mult_matrix(H, c);
@@ -218,6 +218,8 @@ point project_point(matrix H, point p)
     // Comprobar aqui la division por 0
     // IMPORTANTE
     point q = make_point((out.data[0][0])/(out.data[2][0]), (out.data[1][0])/(out.data[2][0]));
+    free_matrix(c);
+    free_matrix(out);
     return q;
 }
 
@@ -253,6 +255,8 @@ int model_inliers(matrix H, match *m, int n, float thresh)
     int numMatch = n;
     match aux;
 
+    printf("Selected threshold: %f \n",thresh);
+    printf("Initialized num_match: %d \n", numMatch);
     for (int j=0; j<n; j++)
     {
         distance = point_distance(project_point(H, m[j].p), m[j].q);
@@ -288,14 +292,8 @@ int model_inliers(matrix H, match *m, int n, float thresh)
     }
 
     printf("Number of points below threshold: %d \n", count);
+    printf("Decreased num_match variable: %d \n", numMatch);
     return count;
-}
-
-void swap(match* a, match* b)
-{
-    match aux = *a;
-    *a = *b;
-    *b = aux;
 }
 
 // Randomly shuffle matches for RANSAC.
@@ -304,6 +302,14 @@ void swap(match* a, match* b)
 void randomize_matches(match *m, int n)
 {
     // TODO: implement Fisher-Yates to shuffle the array.
+    int i, j; // create local variables to hold values for shuffle
+    match tmp;
+    for (i = n - 1; i > 0; i--) { // for loop to shuffle
+        j = rand() % (i + 1); //randomise j for shuffle with Fisher Yates
+        tmp = m[j];
+        m[j] = m[i];
+        m[i] = tmp;
+    }
 }
 
 // Computes homography between two images given matching pixels.
