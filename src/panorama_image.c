@@ -318,6 +318,7 @@ void randomize_matches(match *m, int n)
 // returns: matrix representing homography H that maps image a to image b.
 matrix compute_homography(match *matches, int n)
 {
+    // It is n*2 because we have x's and y's coordinates
     matrix M = make_matrix(n*2, 8);
     matrix b = make_matrix(n*2, 1);
 
@@ -328,18 +329,41 @@ matrix compute_homography(match *matches, int n)
         double y  = matches[i].p.y;
         double yp = matches[i].q.y;
         // TODO: fill in the matrices M and b.
+        b.data[2*i][0] = xp;
+        b.data[2*i+1][0] = yp;
 
+        // First row of M filling
+        M.data[2*i][0] = x;
+        M.data[2*i][1] = y;
+        M.data[2*i][2] = 1.0;
+        M.data[2*i][6] = x*xp;
+        M.data[2*i][7] = y*xp;
+        // Second row of M filling
+        M.data[2*i+1][3] = x;
+        M.data[2*i+1][4] = y;
+        M.data[2*i+1][5] = 1.0;
+        M.data[2*i+1][6] = -x*yp;
+        M.data[2*i+1][7] = -y*yp;
     }
     matrix a = solve_system(M, b);
     free_matrix(M); free_matrix(b); 
+
+    printf("Printing matrix a: \n");
+    print_matrix(a);
 
     // If a solution can't be found, return empty matrix;
     matrix none = {0};
     if(!a.data) return none;
 
     matrix H = make_matrix(3, 3);
+    
     // TODO: fill in the homography H based on the result in a.
-
+    for (int j=0; j<a.rows; ++j)
+    {
+        H.data[j/H.cols][j%H.rows] = a.data[j][0];
+    }
+    // Fill last position of H with 1 for homography aproximation
+    H.data[2][2] = 1.0;
 
     free_matrix(a);
     return H;
