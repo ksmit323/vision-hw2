@@ -468,10 +468,6 @@ image combine_images(image a, image b, matrix H)
     // and see if their projection from a coordinates to b coordinates falls
     // inside of the bounds of image b. If so, use bilinear interpolation to
     // estimate the value of b at that projection, then fill in image c.
-
-    // x = (x > 0) ? ((x < cols) ? x : (cols - 1)) : 0;
-    // y = (y > 0) ? ((y < rows) ? y : (rows - 1)) : 0;
-    
     point originA, pB;
     float pixel;
     for (k = 0; k < c.c; ++k)
@@ -493,8 +489,6 @@ image combine_images(image a, image b, matrix H)
             }
         }
     }
-    
-
     return c;
 }
 
@@ -523,7 +517,7 @@ image panorama_image(image a, image b, float sigma, float thresh, int nms, float
     // Run RANSAC to find the homography
     matrix H = RANSAC(m, mn, inlier_thresh, iters, cutoff);
 
-    if(1){
+    if(0){
         // Mark corners and matches between images
         mark_corners(a, ad, an);
         mark_corners(b, bd, bn);
