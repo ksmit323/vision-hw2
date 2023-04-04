@@ -377,11 +377,12 @@ matrix RANSAC(match *m, int n, float thresh, int k, int cutoff)
 
     // Sustituir i, quizas utilizar un while
     int i = 0;
+    matrix H;
     while (i<k)
     {
         randomize_matches(m, n);
         // Fit model to sample
-        matrix H = compute_homography(m, 4);
+        H = compute_homography(m, 4);
 
         // Data within thresh of model
         e = model_inliers(H, m, n, thresh);
@@ -390,14 +391,16 @@ matrix RANSAC(match *m, int n, float thresh, int k, int cutoff)
             // Fit model to all inliers
             best = e;
             // Copy matrices
-            Hb.data = H.data;
+            Hb = compute_homography(m, best);
             if (e >= cutoff)
             {
+                free_matrix(H);
                 return Hb;
             }
         }
         i++;
     }
+    free_matrix(H);
     return Hb;
 }
 
@@ -422,11 +425,23 @@ image combine_images(image a, image b, matrix H)
     topleft.x = MIN(c1.x, MIN(c2.x, MIN(c3.x, c4.x)));
     topleft.y = MIN(c1.y, MIN(c2.y, MIN(c3.y, c4.y)));
 
+    printf("C1.x: %f, C1.y: %f \n", c1.x, c1.y);
+    printf("C2.x: %f, C2.y: %f \n", c2.x, c2.y);
+    printf("C3.x: %f, C3.y: %f \n", c3.x, c3.y);
+    printf("C4.x: %f, C4.y: %f \n", c4.x, c4.y);
+    printf("botright.x: %f, botright.y: %f, topleft.x: %f, topleft.y: %f \n", botright.x, botright.y, topleft.x, topleft.y);
+
+    // Project extra point
+    point c5 = project_point(Hinv, make_point(b.w/2, 0));
+    printf("C5.x: %f, C5.y: %f \n", c5.x, c5.y);
+
     // Find how big our new image should be and the offsets from image a.
     int dx = MIN(0, topleft.x);
     int dy = MIN(0, topleft.y);
     int w = MAX(a.w, botright.x) - dx;
     int h = MAX(a.h, botright.y) - dy;
+
+    printf("dx: %d, dy: %d, w: %d, h: %d \n", dx, dy, w, h);
 
     // Can disable this if you are making very big panoramas.
     // Usually this means there was an error in calculating H.
@@ -443,6 +458,7 @@ image combine_images(image a, image b, matrix H)
         for(j = 0; j < a.h; ++j){
             for(i = 0; i < a.w; ++i){
                 // TODO: fill in.
+                set_pixel(c, i+abs(dx), j+abs(dy), k, get_pixel(a, i, j , k));
             }
         }
     }
@@ -452,6 +468,32 @@ image combine_images(image a, image b, matrix H)
     // and see if their projection from a coordinates to b coordinates falls
     // inside of the bounds of image b. If so, use bilinear interpolation to
     // estimate the value of b at that projection, then fill in image c.
+
+    // x = (x > 0) ? ((x < cols) ? x : (cols - 1)) : 0;
+    // y = (y > 0) ? ((y < rows) ? y : (rows - 1)) : 0;
+    
+    point originA, pB;
+    float pixel;
+    for (k = 0; k < c.c; ++k)
+    {
+        for (j = 0; j < c.h; ++j)
+        {
+            for (i = 0; i < c.w; ++i)
+            {
+                // Set point to project
+                originA.x = i-abs(dx);
+                originA.y = j-abs(dy);
+
+                pB = project_point(H, originA);
+                if ((pB.x >= 0) && (pB.x < b.w) && (pB.y >= 0) && (pB.y < b.h))
+                {
+                    pixel = bilinear_interpolate(b, pB.x, pB.y, k);
+                    set_pixel(c, i, j, k, pixel);
+                }
+            }
+        }
+    }
+    
 
     return c;
 }
