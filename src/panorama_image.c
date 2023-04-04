@@ -425,23 +425,11 @@ image combine_images(image a, image b, matrix H)
     topleft.x = MIN(c1.x, MIN(c2.x, MIN(c3.x, c4.x)));
     topleft.y = MIN(c1.y, MIN(c2.y, MIN(c3.y, c4.y)));
 
-    printf("C1.x: %f, C1.y: %f \n", c1.x, c1.y);
-    printf("C2.x: %f, C2.y: %f \n", c2.x, c2.y);
-    printf("C3.x: %f, C3.y: %f \n", c3.x, c3.y);
-    printf("C4.x: %f, C4.y: %f \n", c4.x, c4.y);
-    printf("botright.x: %f, botright.y: %f, topleft.x: %f, topleft.y: %f \n", botright.x, botright.y, topleft.x, topleft.y);
-
-    // Project extra point
-    point c5 = project_point(Hinv, make_point(b.w/2, 0));
-    printf("C5.x: %f, C5.y: %f \n", c5.x, c5.y);
-
     // Find how big our new image should be and the offsets from image a.
     int dx = MIN(0, topleft.x);
     int dy = MIN(0, topleft.y);
     int w = MAX(a.w, botright.x) - dx;
     int h = MAX(a.h, botright.y) - dy;
-
-    printf("dx: %d, dy: %d, w: %d, h: %d \n", dx, dy, w, h);
 
     // Can disable this if you are making very big panoramas.
     // Usually this means there was an error in calculating H.
@@ -489,6 +477,7 @@ image combine_images(image a, image b, matrix H)
             }
         }
     }
+    free_matrix(Hinv);
     return c;
 }
 
