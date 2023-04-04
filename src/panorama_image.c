@@ -141,13 +141,14 @@ match *match_descriptors(descriptor *a, int an, descriptor *b, int bn, int *mn)
     // We will have at most an matches.
     *mn = an;
     match *m = calloc(an, sizeof(match));
-    float l1, aux;
+    
     for(j = 0; j < an; ++j){
+        float l1 = INFINITY;
+        float aux;
         // TODO: for every descriptor in a, find best match in b.
         // record ai as the index in *a and bi as the index in *b.
         int bind = 0; // <- find the best match
-        l1 = l1_distance(a[j].data, b[0].data, a[j].n);
-        for (i=1; i<bn; ++i)
+        for (i=0; i<bn; ++i)
         {   
             aux = l1_distance(a[j].data, b[i].data, a[j].n);
             if (aux < l1)
@@ -243,6 +244,8 @@ float point_distance(point p, point q)
 //          so that the inliers are first in the array. For drawing.
 int model_inliers(matrix H, match *m, int n, float thresh)
 {
+    // My version
+    
     int i;
     int count = 0;
     // TODO: count number of matches that are inliers
@@ -254,14 +257,6 @@ int model_inliers(matrix H, match *m, int n, float thresh)
     float distance;
     int numMatch = n;
     match aux;
-
-    printf("Selected threshold: %f \n",thresh);
-    printf("Initialized num_match: %d \n", numMatch);
-    for (int j=0; j<n; j++)
-    {
-        distance = point_distance(project_point(H, m[j].p), m[j].q);
-        printf("Calculated distance prev sorting: %f \n", distance);
-    }
 
     i =0;
     while (i < numMatch)
@@ -283,16 +278,6 @@ int model_inliers(matrix H, match *m, int n, float thresh)
             numMatch--;
         }
     }
-
-
-    for (int j=0; j<n; j++)
-    {
-        distance = point_distance(project_point(H, m[j].p), m[j].q);
-        printf("Calculated distance after sorting: %f \n", distance);
-    }
-
-    printf("Number of points below threshold: %d \n", count);
-    printf("Decreased num_match variable: %d \n", numMatch);
     return count;
 }
 
@@ -306,9 +291,9 @@ void randomize_matches(match *m, int n)
     match tmp;
     for (i = n - 1; i > 0; i--) { // for loop to shuffle
         j = rand() % (i + 1); //randomise j for shuffle with Fisher Yates
-        tmp = m[j];
-        m[j] = m[i];
-        m[i] = tmp;
+        tmp = m[i];
+        m[i] = m[j];
+        m[j] = tmp;
     }
 }
 
@@ -336,8 +321,8 @@ matrix compute_homography(match *matches, int n)
         M.data[2*i][0] = x;
         M.data[2*i][1] = y;
         M.data[2*i][2] = 1.0;
-        M.data[2*i][6] = x*xp;
-        M.data[2*i][7] = y*xp;
+        M.data[2*i][6] = -x*xp;
+        M.data[2*i][7] = -y*xp;
         // Second row of M filling
         M.data[2*i+1][3] = x;
         M.data[2*i+1][4] = y;
@@ -348,15 +333,12 @@ matrix compute_homography(match *matches, int n)
     matrix a = solve_system(M, b);
     free_matrix(M); free_matrix(b); 
 
-    printf("Printing matrix a: \n");
-    print_matrix(a);
-
     // If a solution can't be found, return empty matrix;
     matrix none = {0};
     if(!a.data) return none;
 
     matrix H = make_matrix(3, 3);
-    
+
     // TODO: fill in the homography H based on the result in a.
     for (int j=0; j<a.rows; ++j)
     {
@@ -381,6 +363,7 @@ matrix RANSAC(match *m, int n, float thresh, int k, int cutoff)
     int e;
     int best = 0;
     matrix Hb = make_translation_homography(256, 0);
+
     // TODO: fill in RANSAC algorithm.
     // for k iterations:
     //     shuffle the matches
@@ -391,6 +374,30 @@ matrix RANSAC(match *m, int n, float thresh, int k, int cutoff)
     //         if it's better than the cutoff:
     //             return it immediately
     // if we get to the end return the best homography
+
+    // Sustituir i, quizas utilizar un while
+    int i = 0;
+    while (i<k)
+    {
+        randomize_matches(m, n);
+        // Fit model to sample
+        matrix H = compute_homography(m, 4);
+
+        // Data within thresh of model
+        e = model_inliers(H, m, n, thresh);
+        if (e > best)
+        {
+            // Fit model to all inliers
+            best = e;
+            // Copy matrices
+            Hb.data = H.data;
+            if (e >= cutoff)
+            {
+                return Hb;
+            }
+        }
+        i++;
+    }
     return Hb;
 }
 
