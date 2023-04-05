@@ -530,6 +530,40 @@ image panorama_image(image a, image b, float sigma, float thresh, int nms, float
 image cylindrical_project(image im, float f)
 {
     //TODO: project image onto a cylinder
-    image c = copy_image(im);
+    image c = make_image(im.w, im.h, im.c);
+
+    float theta, h;
+    float Xp, Yp, Zp;
+
+    int xc = (int)im.w/2;
+    int yc = (int)im.h/2;
+
+    float xp, yp;
+    float pixel;
+
+    for (int k = 0; k < im.c; ++k)
+    {
+        for (int j = 0; j < im.h; ++j)
+        {
+            for (int i = 0; i < im.w; ++i)
+            {
+                theta = (float)(i-xc)/f;
+                h = (float)(j-yc)/f;
+
+                Xp = sinf(theta);
+                Zp = cosf(theta);
+                Yp = h;
+
+                xp = f*(Xp/Zp) + xc;
+                yp = f*(Yp/Zp) + yc;
+
+                if ((xp >= 0) && (xp < c.w) && (yp >= 0) && (yp < c.h))
+                {
+                    pixel = bilinear_interpolate(im, xp, yp, k);
+                    set_pixel(c, i, j, k, pixel);
+                }
+            }
+        }
+    }
     return c;
 }

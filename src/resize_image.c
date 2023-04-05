@@ -41,6 +41,16 @@ image nn_resize(image im, int w, int h)
 
 float bilinear_interpolate(image im, float x, float y, int c)
 {
+
+    int truncatedx = (int)x;
+    int truncatedy = (int)y;
+
+    // Arreglar esto para contemplar estos corner case
+    if ( (truncatedx == x) ||  (truncatedy == y))
+    {
+        return get_pixel(im, truncatedx, truncatedy, c);
+    }
+
     // TODO
     int x1 = floor(x);
     int x2 = ceil(x);
