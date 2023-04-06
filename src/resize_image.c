@@ -45,25 +45,58 @@ float bilinear_interpolate(image im, float x, float y, int c)
     int truncatedx = (int)x;
     int truncatedy = (int)y;
 
-    // Arreglar esto para contemplar estos corner case
-    if ( (truncatedx == x) ||  (truncatedy == y))
+    // Coorners coordinates with int values
+    int x1, x2, y1, y2;
+    // Variables to place pixel values of coorners coordinates
+    float v1, v2, v3, v4;
+    // Variables to place calculated distances (d) and interpolated values (q)
+    float d1,d2,d3,d4,q1,q2,q=0;
+
+    // Arreglar esto para contemplar estos corner case 
+    if ( (truncatedx == x) && (truncatedy == y))
     {
         return get_pixel(im, truncatedx, truncatedy, c);
     }
+    else if (truncatedx == x)
+    {
+        y1 = floor(y);
+        y2 = ceil(y);
+
+        v1 = get_pixel(im, truncatedx, y1, c);
+        v3 = get_pixel(im, truncatedx, y2, c);
+
+        d3 = y-y1;
+        d4 = y2-y;
+
+        q = v1*d4+v3*d3;
+        return q;
+    }
+    else if (truncatedy == y)
+    {
+        x1 = floor(x);
+        x2 = ceil(x);
+
+        v1 = get_pixel(im, x1, truncatedy, c);
+        v2 = get_pixel(im, x2, truncatedy, c);
+
+        d1 = x-x1;
+        d2 = x2-x;
+
+        q = v1*d2+v2*d1;
+        return q;
+    }
 
     // TODO
-    int x1 = floor(x);
-    int x2 = ceil(x);
-    int y1 = floor(y);
-    int y2 = ceil(y);
+    x1 = floor(x);
+    x2 = ceil(x);
+    y1 = floor(y);
+    y2 = ceil(y);
 
     // Get sorrounding pixels
-    float v1 = get_pixel(im, x1, y1, c);
-    float v2 = get_pixel(im, x2, y1, c);
-    float v3 = get_pixel(im, x1, y2, c);
-    float v4 = get_pixel(im, x2, y2, c);
-
-    float d1,d2,d3,d4,q1,q2,q=0;
+    v1 = get_pixel(im, x1, y1, c);
+    v2 = get_pixel(im, x2, y1, c);
+    v3 = get_pixel(im, x1, y2, c);
+    v4 = get_pixel(im, x2, y2, c);
 
     d1 = x-x1;
     d2 = x2-x;
