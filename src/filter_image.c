@@ -9,144 +9,146 @@
 void l1_normalize(image im)
 {
     // TODO
-    // Assert 1 channel image
-    assert(im.c == 1);
+    // Normalize the image so that the sum of all the pixels sum to 1
 
-    float cumsum = 0.0;
-    int size = im.h*im.w;
-
-    for (int i=0; i<size; i++)
-    {
-        cumsum += im.data[i];
+    // Find the total pixel sum across all pixels
+    float pixel_sum = 0;
+    for (int i = 0; i < im.h*im.w*im.c; i++){
+        pixel_sum += im.data[i];
     }
-    scale_image(im, 0, 1/cumsum);
+
+    // Divide each pixel by the pixel sum
+    for (int i = 0; i < im.h*im.w*im.c; i++){
+        im.data[i] /= pixel_sum;
+    }
 }
 
 image make_box_filter(int w)
 {
     // TODO
-    image im = make_image(w,w,1);
-    // Adds one to each image possition
-    shift_image(im, 0, 1.0);
-    // Normalize values
-    l1_normalize(im);
-    return im;
+    // Create a new image
+    image box_filter = make_image(w, w, 1);
+
+    // Fill in the new image with all 1's
+    for (int i = 0; i < w*w; i++){
+        box_filter.data[i] = 1;
+    }
+
+    l1_normalize(box_filter);
+
+    return box_filter;
 }
 
 image convolve_image(image im, image filter, int preserve)
 {
     // TODO
-    assert(im.c == filter.c || filter.c == 1);
 
-    // Make resulting image
-    int outChannels = (preserve) ? im.c : 1;
+    //Filter better have the same number of channels as the input image or have 1
+    assert(filter.c == im.c || filter.c == 1);
 
-    image imgRes = make_image(im.w, im.h, outChannels);
-    
-    // Padding amount
-    int Padx = floor(filter.w/2.);
-    int Pady = floor(filter.h/2.);
+    // if preserve is set to 1, the output image will have the same number of channels as the input image
+    int channels = (preserve) ? im.c : 1;
 
-    // Pixels to get from image and filter
-    float filPix, imPix = 0.;
 
-    for (int y=0; y!=im.h; y++)
-    {
-        for (int x=0; x!=im.w; x++)
-        {   
-            if (preserve == 1)
-            {
-                for (int ch=0; ch!=im.c; ch++)
-                {
-                    float dstPix = 0.;
-                    for (int Fy = 0; Fy!=filter.h; Fy++)
-                    {
-                        for (int Fx=0; Fx!=filter.w; Fx++)
-                        {
-                            filPix = get_pixel(filter, Fx, Fy, 0);
-                            imPix = get_pixel(im, x+Fx-Padx, y+Fy-Pady, ch);
-                            dstPix += (imPix*filPix);
-                        }
-                    }
-                    set_pixel(imgRes, x, y, ch, dstPix);
-                }
+    // Create new image
+    image convolved = make_image(im.w, im.h, channels);
+    float convolved_pixel;
+
+    // Loop through each pixel in the image
+    for (int i = 0; i < im.h; i++){
+        for (int j = 0; j < im.w; j++){
+
+            if (!preserve){
+                convolved_pixel = 0;
             }
-            else
-            {
-                float dstPix = 0.;
-                for (int Fy = 0; Fy!=filter.h; Fy++)
-                {
-                    for (int Fx=0; Fx!=filter.w; Fx++)
-                    {
-                        for (int ch=0; ch!=im.c; ch++)
-                        {
-                            imPix = get_pixel(im, x+Fx-Padx, y+Fy-Pady, ch);
-                            if (im.c == filter.c)
-                            {
-                                filPix = get_pixel(filter, Fx, Fy, ch);
-                            }
-                            else
-                            {
-                                filPix = get_pixel(filter, Fx, Fy, 0);
-                            }  
-                            dstPix += (imPix*filPix);   
+
+            for(int k = 0; k < im.c; k++){
+
+                if (preserve){
+                    convolved_pixel = 0;
+                }
+
+                // Loop through each kernel
+                for (int l = 0; l < filter.h; l++){
+                    for (int m = 0; m < filter.w; m++){
+
+                        // Set the coordinates to get the pixel value in the original image
+                        int x = j - filter.w/2 + m;
+                        int y = i - filter.h/2 + l;
+
+                        // Get the kernel value in the filter image
+                        float kernel;
+                        if (filter.c == 1){
+                            kernel = get_pixel(filter, m, l, 0);
+                        } else {
+                            kernel = get_pixel(filter, m, l, k);
                         }
+
+                        // Multiply the pixel value by the kernel value and add to the convolved pixel
+                        float original_pixel = get_pixel(im, x, y, k);
+                        convolved_pixel += original_pixel * kernel;
                     }
                 }
-                set_pixel(imgRes, x, y, 0, dstPix);
+
+                // Set the convolved pixel
+                if (preserve){
+                    set_pixel(convolved, j, i, k, convolved_pixel);
+                } else {
+                    set_pixel(convolved, j, i, 0, convolved_pixel);
+                }
             }
         }
     }
-    return imgRes;
+
+    return convolved;
 }
 
 image make_highpass_filter()
 {
-    image highPassFilter = make_image(3,3,1);
-    // First row values
-    set_pixel(highPassFilter, 1, 0, 0, -1);
-    // Second row values
-    set_pixel(highPassFilter, 0, 1, 0, -1);
-    set_pixel(highPassFilter, 1, 1, 0, 4);
-    set_pixel(highPassFilter, 2, 1, 0, -1);
-    // Third row values
-    set_pixel(highPassFilter, 1, 2, 0, -1);
-    
-    return highPassFilter;
+    // TODO
+    image highpass = make_image(3,3,1);
+    highpass.data[0] = 0;
+    highpass.data[1] = -1;
+    highpass.data[2] = 0;
+    highpass.data[3] = -1;
+    highpass.data[4] = 4;
+    highpass.data[5] = -1;
+    highpass.data[6] = 0;
+    highpass.data[7] = -1;
+    highpass.data[8] = 0;
+    return highpass;
 }
 
 image make_sharpen_filter()
 {
     // TODO
-    image sharpenFilter = make_image(3,3,1);
-    // First row values
-    set_pixel(sharpenFilter, 1, 0, 0, -1);
-    // Second row values
-    set_pixel(sharpenFilter, 0, 1, 0, -1);
-    set_pixel(sharpenFilter, 1, 1, 0, 5);
-    set_pixel(sharpenFilter, 2, 1, 0, -1);
-    // Third row values
-    set_pixel(sharpenFilter, 1, 2, 0, -1);
-    
-    return sharpenFilter;
+    image sharpen = make_image(3,3,1);
+    sharpen.data[0] = 0;
+    sharpen.data[1] = -1;
+    sharpen.data[2] = 0;
+    sharpen.data[3] = -1;
+    sharpen.data[4] = 5;
+    sharpen.data[5] = -1;
+    sharpen.data[6] = 0;
+    sharpen.data[7] = -1;
+    sharpen.data[8] = 0;
+    return sharpen;
 }
 
 image make_emboss_filter()
 {
     // TODO
-    image embossFilter = make_image(3,3,1);
-    // First row values
-    set_pixel(embossFilter, 0, 0, 0, -2);
-    set_pixel(embossFilter, 1, 0, 0, -1);
-    // Second row values
-    set_pixel(embossFilter, 0, 1, 0, -1);
-    set_pixel(embossFilter, 1, 1, 0, 1);
-    set_pixel(embossFilter, 2, 1, 0, 1);
-    // Third row values
-    set_pixel(embossFilter, 1, 2, 0, 1);
-    set_pixel(embossFilter, 2, 2, 0, 2);
-
-    return embossFilter;
+    image emboss = make_image(3,3,1);
+    emboss.data[0] = -2;
+    emboss.data[1] = -1;
+    emboss.data[2] = 0;
+    emboss.data[3] = -1;
+    emboss.data[4] = 1;
+    emboss.data[5] = 1;
+    emboss.data[6] = 0;
+    emboss.data[7] = 1;
+    emboss.data[8] = 2;
+    return emboss;
 }
 
 // Question 2.2.1: Which of these filters should we use preserve when we run our convolution and which ones should we not? Why?
@@ -154,213 +156,207 @@ image make_emboss_filter()
 
 // Question 2.2.2: Do we have to do any post-processing for the above filters? Which ones and why?
 // Answer: TODO
-// Yes, all of then need normalization between [0,1] if we want to show the output as image
 
 image make_gaussian_filter(float sigma)
 {
     // TODO
-    // sigma * 6
-    int gaussianSize = (int)ceil(sigma*6);
-    // odd sigma* 6
-    gaussianSize = (fmod(gaussianSize,2) == 0) ? gaussianSize+1: gaussianSize;
+    // Instructions state to make the filter/kernel size 6 times bigger than sigma
+    int kernel_size = sigma * 6;
 
-    image gaussian = make_image(gaussianSize,gaussianSize,1);
+    // We want the dimensions to be an odd number
+    if (kernel_size % 2 == 0){
+        kernel_size += 1;
+    }
 
-    // Base and exponenet for sigma calculation
-    float base, exponent = 0.F;
+    // Create a new image
+    image gauss = make_image(kernel_size, kernel_size, 1);
 
-    // Shifting x and y to center filter grid on 0
-    int shiftingXY = floor(gaussianSize/2);
+    // Fill in the kernel with gaussian values
+    for (int i = 0; i < gauss.h; i++){
+        for (int j = 0; j < gauss.w; j++){
 
-    for (int y=0; y!=gaussian.h; y++)
-    {
-        for (int x=0; x!=gaussian.w; x++)
-        {
-            base = 1 / (TWOPI*powf(sigma, 2));
-            exponent = expf(-1*(pow(x-shiftingXY,2)+pow(y-shiftingXY,2))/(2*powf(sigma,2)));
-            set_pixel(gaussian, x, y, 0, base*exponent);
+            // Set the center coordinates for x and y
+            int x  = j - gauss.w/2;
+            int y  = i - gauss.h/2;
+
+            // Use the formula given in the slides
+            float part_1 = 1 / (TWOPI * sigma*sigma);
+            float part_2 = exp(-(x*x + y*y)/(2*sigma*sigma));
+            float gaussian = part_1 * part_2;
+            set_pixel(gauss, j, i, 0, gaussian);
         }
     }
-    return gaussian;
+
+    l1_normalize(gauss);
+
+    return gauss;
 }
 
 image add_image(image a, image b)
 {
     // TODO
-    assert(a.h == b.h);
-    assert(a.w == b.w);
-    assert(a.c == b.c);
+    // Check that both images are the same size
+    int a_size = a.h * a.w * a.c;
+    int b_size = b.h * b.w * b.c;
+    assert(a_size == b_size);
 
-    image result = make_image(b.w, b.h, b.c);
+    // Create new image
+    image sum = make_image(a.w, a.h, a.c);
 
-    for (int c=0; c!=a.c; c++)
-    {
-        for (int y=0; y!=a.h; y++)
-        {
-            for (int x=0; x!=a.w; x++)
-            {
-                set_pixel(result, x, y, c, get_pixel(a, x, y, c)+get_pixel(b, x, y, c));
-            }
-        }
+    // Add both images together by adding the pixels together
+    for (int i = 0; i < a_size; i++){
+        sum.data[i] = a.data[i] + b.data[i];
     }
-    return result;
+
+    return sum;
 }
 
 image sub_image(image a, image b)
 {
     // TODO
-    assert(a.h == b.h);
-    assert(a.w == b.w);
-    assert(a.c == b.c);
+    // Check that both images are the same size
+    int a_size = a.h * a.w * a.c;
+    int b_size = b.h * b.w * b.c;
+    assert(a_size == b_size);
 
-    image result = make_image(b.w, b.h, b.c);
+    // Create new image
+    image sub = make_image(a.w, a.h, a.c);
 
-    for (int c=0; c!=a.c; c++)
-    {
-        for (int y=0; y!=a.h; y++)
-        {
-            for (int x=0; x!=a.w; x++)
-            {
-                set_pixel(result, x, y, c, get_pixel(a, x, y, c)-get_pixel(b, x, y, c));
-            }
-        }
+    // Subtract both images together by subtracting the pixels 
+    for (int i = 0; i < a_size; i++){
+        sub.data[i] = a.data[i] - b.data[i];
     }
-    return result;
+
+    return sub;
 }
 
 image make_gx_filter()
 {
     // TODO
-    image sobelXFilter = make_image(3,3,1);
-    // First row values
-    set_pixel(sobelXFilter, 0, 0, 0, -1);
-    set_pixel(sobelXFilter, 2, 0, 0, 1);
-    // Second row values
-    set_pixel(sobelXFilter, 0, 1, 0, -2);
-    set_pixel(sobelXFilter, 2, 1, 0, 2);
-    // Third row values
-    set_pixel(sobelXFilter, 0, 2, 0, -1);
-    set_pixel(sobelXFilter, 2, 2, 0, 1);
-
-    return sobelXFilter;
+    image gx = make_image(3,3,1);
+    gx.data[0] = -1;
+    gx.data[1] = 0;
+    gx.data[2] = 1;
+    gx.data[3] = -2;
+    gx.data[4] = 0;
+    gx.data[5] = 2;
+    gx.data[6] = -1;
+    gx.data[7] = 0;
+    gx.data[8] = 1;
+    return gx;
 }
 
 image make_gy_filter()
 {
     // TODO
-    image sobelYFilter = make_image(3,3,1);
-    // First row values
-    set_pixel(sobelYFilter, 0, 0, 0, -1);
-    set_pixel(sobelYFilter, 1, 0, 0, -2);
-    set_pixel(sobelYFilter, 2, 0, 0, -1);
-    // Second row values
-    // Third row values
-    set_pixel(sobelYFilter, 0, 2, 0, 1);
-    set_pixel(sobelYFilter, 1, 2, 0, 2);
-    set_pixel(sobelYFilter, 2, 2, 0, 1);
-
-    return sobelYFilter;
+    image gy = make_image(3,3,1);
+    gy.data[0] = -1;
+    gy.data[1] = -2;
+    gy.data[2] = -1;
+    gy.data[3] = 0;
+    gy.data[4] = 0;
+    gy.data[5] = 0;
+    gy.data[6] = 1;
+    gy.data[7] = 2;
+    gy.data[8] = 1;
+    return gy;
 }
 
 void feature_normalize(image im)
 {
     // TODO
-    float min, max, aux;
+    // Find min, max values from the image
+    float min = INFINITY;
+    float max = -1.0;
 
-    min = INFINITY;
-    max = -1;
+    for (int i = 0; i < im.w * im.h * im.c; i++){
+        if (im.data[i] < min){
+            min = im.data[i];
+        }
 
-    for (int c=0; c!=im.c; c++)
-    {
-        for (int y=0; y!=im.h; y++)
-        {
-            for (int x=0; x!=im.w; x++)
-            {
-                aux = get_pixel(im, x, y, c);
-                if (aux < min)
-                {
-                    min = aux;
-                }
-                if (aux > max)
-                {
-                    max = aux;
-                }
-            }
+        if (im.data[i] > max){
+            max = im.data[i];
         }
     }
 
-    for (int c=0; c!=im.c; c++)
-    {
-        for (int y=0; y!=im.h; y++)
-        {
-            for (int x=0; x!=im.w; x++)
-            {
-                if ((max-min)==0)
-                {
-                    set_pixel(im, x, y, c, 0);
-                }
-                else
-                {   float pixel = get_pixel(im, x, y, c);
-                    set_pixel(im, x, y, c, (pixel-min)/(max-min));
-                }
-            }
+    // Find the range
+    float range = max - min;
+
+    // Normalize each pixel to be between values 0 and 1
+    for (int i = 0; i < im.w * im.h * im.c; i++){
+        if (range == 0){
+            im.data[i] = 0;
+        }
+        else{
+            im.data[i] = (im.data[i] - min) / range;
         }
     }
 }
 
-
 image *sobel_image(image im)
 {
     // TODO
-    image *imgarray = calloc(2, sizeof(image));
 
-    image sobelxF = make_gx_filter();
-    image sobelyF = make_gy_filter();
+    // Create an array of image pointers
+    image *result_image = calloc(2, sizeof(image));
 
-    image sobelXout = convolve_image(im, sobelxF, 0);
-    image sobelYout = convolve_image(im, sobelyF, 0);
+    // Convolve the image with the sobel filters
+    image GX = convolve_image(im, make_gx_filter(), 0);
+    image GY = convolve_image(im, make_gy_filter(), 0);
 
-    imgarray[0] = make_image(sobelXout.w, sobelXout.h, sobelXout.c);
-    imgarray[1] = make_image(sobelXout.w, sobelXout.h, sobelXout.c);
+    // Create the magnitude and direction images
+    result_image[0] = make_image(GX.w, GX.h, GX.c);
+    result_image[1] = make_image(GX.w, GX.h, GX.c);
 
-    float Gx, Gy;
-    for (int y = 0; y!= sobelXout.h; y++)
-    {
-        for (int x=0; x!=sobelXout.w; x++)
-        {
-                Gx = get_pixel(sobelXout, x, y, 0);
-                Gy = get_pixel(sobelYout, x, y, 0);
-                set_pixel(imgarray[0], x, y, 0, sqrt(pow(Gx, 2)+pow(Gy, 2)));
-                set_pixel(imgarray[1], x, y, 0,  atan2f(Gy, Gx));
-        }
+    // Calculate the magnitude and direction of the image
+    for (int i = 0; i < GX.w * GX.h * GX.c; i++){
+        // Magnitude
+        result_image[0].data[i] = sqrt(GX.data[i]*GX.data[i] + GY.data[i]*GY.data[i]);
+        // Direction
+        result_image[1].data[i] = atan2(GY.data[i], GX.data[i]);
     }
-    return imgarray;
+
+    return result_image;
 }
 
 image colorize_sobel(image im)
 {
     // TODO
-    image filter = make_gaussian_filter(3);
+    // Get the magnitude and direction images
+    image *sobel = sobel_image(im);
+    image magnitude = sobel[0];
+    image direction = sobel[1];
+    feature_normalize(magnitude);
 
-    image outConv = convolve_image(im, filter, 1);
+    // Create a new image to hold the colorized sobel image
+    image color = make_image(im.w, im.h, 3);
 
-    image *magnitude = sobel_image(outConv);
+    // Set the pixels of the color image
+    for (int c = 0; c < im.c; c++){
+        for (int y = 0; y < im.h; y++){
+            for(int x = 0; x < im.w; x++){
 
-    feature_normalize(magnitude[0]);
-    feature_normalize(magnitude[1]);
-
-    image output = make_image(im.w, im.h, im.c);
-
-    for (int i=0; i!=im.h; i++)
-    {
-        for (int j=0; j!=im.w; j++)
-        {
-            set_pixel(output, j, i, 0, get_pixel(magnitude[1], j, i, 0));
-            set_pixel(output, j, i, 1, get_pixel(magnitude[0], j, i, 0));
-            set_pixel(output, j, i, 2, get_pixel(magnitude[0], j, i, 0));
+                // Set all Hue pixels to the direction
+                if (c == 0){
+                    float hue_pixel = get_pixel(direction, x, y, c);
+                    set_pixel(color, x, y, c, hue_pixel);
+                }else{
+                // Set all Saturation and Value pixels to the magnitude
+                    float pixel = get_pixel(magnitude, x, y, c);
+                    set_pixel(color, x, y, 1, pixel);
+                    set_pixel(color, x, y, 2, pixel);
+                }
+            }
         }
     }
-    hsv_to_rgb(output);
 
-    return output;
+    // Convert the color image to HSV
+    hsv_to_rgb(color);
+
+    // Free the sobel image
+    free_image(magnitude);
+    free_image(direction);
+
+    return color;
 }
+
